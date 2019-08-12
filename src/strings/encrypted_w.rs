@@ -1,6 +1,6 @@
-use widestring::U16CString;
-use std::os::raw::{c_void};
 use crate::internal;
+use std::os::raw::c_void;
+use widestring::U16CString;
 
 pub struct EncryptedStringW(pub *const i16);
 impl Drop for EncryptedStringW {

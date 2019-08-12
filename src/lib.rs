@@ -1,9 +1,8 @@
 #![feature(type_ascription)]
 
 pub mod internal;
-pub mod strings;
 pub mod licensing;
-
+pub mod strings;
 
 #[macro_export]
 macro_rules! protected {
