@@ -1,12 +1,22 @@
 [package]
 name = "vmprotect"
-version = "0.1.4"
+version = "0.1.5"
 authors = ["Лач <iam@lach.pw>"]
 edition = "2018"
 description = "Unofficial VMProtect SDK for Rust"
 license = "MIT"
 build = "build.rs"
 
+[features]
+default = ["licensing", "service", "strings"]
+licensing = []
+strings = []
+service = []
+
 [dependencies]
 real_c_string = "0.1.1"
 widestring = "0.4.0"
+bitflags = "1.1.0"
+enum_primitive = "0.1.1"
+num-traits = "0.2.8"
+chrono = "0.4"
