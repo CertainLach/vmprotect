@@ -6,6 +6,7 @@ edition = "2018"
 description = "Unofficial VMProtect SDK for Rust"
 license = "MIT"
 build = "build.rs"
+repository = "https://github.com/CertainLach/vmprotect/"
 
 [features]
 default = ["licensing", "service", "strings"]
