@@ -7,8 +7,8 @@ use std::os::raw::{c_char, c_void};
 use std::time::Duration;
 
 /// Original API implementation
-
-#[cfg_attr(target_pointer_width = "64", link(name = "VMProtectSDK64"))]
+#[cfg_attr(all(not(target_os = "macos"), target_pointer_width = "64"), link(name = "VMProtectSDK64"))]
+#[cfg_attr(all(target_os = "macos", target_pointer_width = "64"), link(name = "VMProtectSDK"))]
 #[cfg_attr(target_pointer_width = "32", link(name = "VMProtectSDK32"))]
 extern "C" {
     // Markers
