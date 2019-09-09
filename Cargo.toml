@@ -1,6 +1,6 @@
 [package]
 name = "vmprotect"
-version = "0.1.8"
+version = "0.1.9"
 authors = ["Лач <iam@lach.pw>"]
 edition = "2018"
 description = "Unofficial VMProtect SDK for Rust"

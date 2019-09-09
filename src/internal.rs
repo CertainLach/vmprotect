@@ -10,7 +10,7 @@ use std::time::Duration;
 #[cfg_attr(all(not(target_os = "macos"), target_pointer_width = "64"), link(name = "VMProtectSDK64"))]
 #[cfg_attr(all(target_os = "macos", target_pointer_width = "64"), link(name = "VMProtectSDK"))]
 #[cfg_attr(target_pointer_width = "32", link(name = "VMProtectSDK32"))]
-extern "C" {
+extern "system" {
     // Markers
     pub fn VMProtectBegin(name: *const c_char);
     pub fn VMProtectBeginVirtualization(name: *const c_char);
