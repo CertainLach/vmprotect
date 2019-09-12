@@ -1,19 +1,22 @@
-# vmprotect
+# vmprotect ![crates.io](https://img.shields.io/crates/v/vmprotect.svg)
+
 WIP VMProtect SDK for rust
 
-# Features
-## Basic VMProtect features:
+## Basic VMProtect features
+
 ### `protected!` macro for code
 
-Syntax: 
+Syntax:
+
 ```rust
 use vmprotect::protected;
 
-protected!("NAME"; TYPE [KEY]; {/*CODE*/})
+protected!("NAME"; TYPE [KEY]; { /*CODE*/ })
 ```
+
 - NAME: Which name will be displayed in VMProtect GUI
 - TYPE: Protection type (mutate/virtualize/ultra per VMProtect docs)
-- [KEY]: For virtualize/ultra only, require licenze activation to get this function to work
+- [KEY]: For virtualize/ultra only, require license activation to get this function to work
 - CODE: Your code goes here
 
 Protected code block is works like any other rust block, i.e:
@@ -24,10 +27,11 @@ use vmprotect::protected;
 // Before protection
 let a = {2+3};
 // After protection
-let a = protected!("Addiction"; virtualize false; {2+3});
+let a = protected!("Addiction"; virtualize false; { 2 + 3 });
 ```
 
 Example:
+
 ```rust
 #![feature(test)] // For black_box support
 
@@ -43,14 +47,17 @@ fn main() {
     }));
 }
 ```
+
 ### `protected!` macro for texts
 
-Syntax: 
+Syntax:
+
 ```rust
 use vmprotect::protected;
 
 protected!(TYPE "TEXT")
 ```
+
 - TYPE: Text type, possible values: A (for normal c strings)/W (for uint16_t c strings (Used i.e in windows))
 - TEXT: Your text, should be supported by your selected text type
 
@@ -68,6 +75,7 @@ let a = protected!(W; "Привет, мир!");
 ```
 
 Example:
+
 ```rust
 #![feature(type_ascription)] // For `.into(): T` syntax support
 
@@ -78,10 +86,28 @@ fn main() {
 }
 ```
 
-## Licensing:
-TODO Section
+## Licensing
+
+TODO Section, see docs for now
+
 ### HWID
+
 Example:
+
 ```rust
 println!("Your hwid is \"{}\"", vmprotect::licensing::get_hwid().to_str().unwrap());
 ```
+
+## Known problems
+
+### MacOS: Not enough space for the new segment in the file header
+
+Can be fixed by adding `-C link-arg=-Wl,-headerpad,0x500` to rustc args
+
+For cargo:
+
+```rs
+export RUSTFLAGS="-C link-arg=-Wl,-headerpad,0x500"
+```
+
+(Based on <http://vmpsoft.com/forum/viewtopic.php?f=2&t=6837&start=15#p10527>)
