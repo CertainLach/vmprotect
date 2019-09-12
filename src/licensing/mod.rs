@@ -81,8 +81,10 @@ pub fn deactivate_license(serial: &str) -> Result<(), internal::VMProtectActivat
     }
 }
 
+#[allow(unused_must_use)]
 #[test]
 fn test_serial() {
+    // This test only checks if obfuscated code isn't crashing
     get_hwid();
     set_serial_number("Hello!");
     get_serial_number_state();

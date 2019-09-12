@@ -1,77 +1,85 @@
 #![feature(type_ascription)]
 #![feature(stmt_expr_attributes)]
 
+pub use real_c_string;
+
 pub mod internal;
 #[cfg(feature = "licensing")]
 pub mod licensing;
-#[cfg(feature = "strings")]
-pub mod strings;
 #[cfg(feature = "service")]
 pub mod service;
+#[cfg(feature = "strings")]
+pub mod strings;
 
 #[macro_export]
 macro_rules! protected {
-    ($x: expr; mutate; $code: block) => {{
-        let ret;
-        unsafe { vmprotect::internal::VMProtectBeginMutation(real_c_string::real_c_string!($x)) };
-        ret = $code;
-        unsafe {
-            vmprotect::internal::VMProtectEnd();
-        };
-        ret
-    }};
-    ($x: expr; virtualize false; $code: block) => {{
+    ($x: expr; mutate; $code: expr) => {{
         let ret;
         unsafe {
-            vmprotect::internal::VMProtectBeginVirtualization(real_c_string::real_c_string!($x))
+            $crate::internal::VMProtectBeginMutation($crate::real_c_string::real_c_string!($x))
         };
         ret = $code;
         unsafe {
-            vmprotect::internal::VMProtectEnd();
+            $crate::internal::VMProtectEnd();
         };
         ret
     }};
-    ($x: expr; virtualize true; $code: block) => {{
+    ($x: expr; virtualize false; $code: expr) => {{
         let ret;
         unsafe {
-            vmprotect::internal::VMProtectBeginVirtualizationLockByKey(
-                real_c_string::real_c_string!($x),
+            $crate::internal::VMProtectBeginVirtualization($crate::real_c_string::real_c_string!(
+                $x
+            ))
+        };
+        ret = $code;
+        unsafe {
+            $crate::internal::VMProtectEnd();
+        };
+        ret
+    }};
+    ($x: expr; virtualize true; $code: expr) => {{
+        let ret;
+        unsafe {
+            $crate::internal::VMProtectBeginVirtualizationLockByKey(
+                $crate::real_c_string::real_c_string!($x),
             )
         };
         ret = $code;
         unsafe {
-            vmprotect::internal::VMProtectEnd();
+            $crate::internal::VMProtectEnd();
         };
         ret
     }};
-    ($x: expr; ultra false; $code: block) => {{
+    ($x: expr; ultra false; $code: expr) => {{
         let ret;
-        unsafe { vmprotect::internal::VMProtectBeginUltra(real_c_string::real_c_string!($x)) };
+        unsafe { $crate::internal::VMProtectBeginUltra($crate::real_c_string::real_c_string!($x)) };
         ret = $code;
         unsafe {
-            vmprotect::internal::VMProtectEnd();
+            $crate::internal::VMProtectEnd();
         };
         ret
     }};
-    ($x: expr; ultra true; $code: block) => {{
+    ($x: expr; ultra true; $code: expr) => {{
         let ret;
         unsafe {
-            vmprotect::internal::VMProtectBeginUltraLockByKey(real_c_string::real_c_string!($x))
+            $crate::internal::VMProtectBeginUltraLockByKey($crate::real_c_string::real_c_string!(
+                $x
+            ))
         };
         ret = $code;
         unsafe {
-            vmprotect::internal::VMProtectEnd();
+            $crate::internal::VMProtectEnd();
         };
         ret
     }};
     (A; $x: expr) => {
-        vmprotect::strings::encrypted_a::EncryptedStringA(unsafe {
-            vmprotect::internal::VMProtectDecryptStringA(real_c_string::real_c_string!($x))
-        }) as vmprotect::strings::encrypted_a::EncryptedStringA
+        $crate::strings::encrypted_a::EncryptedStringA(unsafe {
+            $crate::internal::VMProtectDecryptStringA($crate::real_c_string::real_c_string!($x))
+        }) as $crate::strings::encrypted_a::EncryptedStringA
     };
     (W; $x: expr) => {
-        vmprotect::strings::encrypted_w::EncryptedStringW(unsafe {
-            vmprotect::internal::VMProtectDecryptStringW(real_c_string::real_c_wstring!($x))
-        }) as vmprotect::strings::encrypted_w::EncryptedStringW // To remove mut
+        $crate::strings::encrypted_w::EncryptedStringW(unsafe {
+            $crate::internal::VMProtectDecryptStringW($crate::real_c_string::real_c_wstring!($x))
+        }) as $crate::strings::encrypted_w::EncryptedStringW // To remove mut
     };
 }

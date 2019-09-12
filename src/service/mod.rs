@@ -29,7 +29,7 @@ pub fn is_valid_image_crc() -> bool {
 /// Runs successfully when segfault isn't caused by executing
 /// service functions
 #[test]
-fn sdk_service_functions_isnt_crashing(){
+fn sdk_service_functions_isnt_crashing() {
     is_protected();
     is_debugger_present(false);
     is_debugger_present(true);
