@@ -1,5 +1,4 @@
-#![feature(type_ascription)]
-#![feature(stmt_expr_attributes)]
+#![feature(type_ascription, proc_macro_hygiene, stmt_expr_attributes)]
 
 pub use real_c_string;
 
@@ -73,13 +72,21 @@ macro_rules! protected {
         ret
     }};
     (A; $x: expr) => {
-        $crate::strings::encrypted_a::EncryptedStringA(unsafe {
-            $crate::internal::VMProtectDecryptStringA($crate::real_c_string::real_c_string!($x))
-        }) as $crate::strings::encrypted_a::EncryptedStringA
+        $crate::strings::encrypted_a::EncryptedStringA(
+            unsafe {
+                $crate::internal::VMProtectDecryptStringA($crate::real_c_string::real_c_string!($x))
+            },
+            std::marker::PhantomData,
+        ) as $crate::strings::encrypted_a::EncryptedStringA
     };
     (W; $x: expr) => {
-        $crate::strings::encrypted_w::EncryptedStringW(unsafe {
-            $crate::internal::VMProtectDecryptStringW($crate::real_c_string::real_c_wstring!($x))
-        }) as $crate::strings::encrypted_w::EncryptedStringW // To remove mut
+        $crate::strings::encrypted_w::EncryptedStringW(
+            unsafe {
+                $crate::internal::VMProtectDecryptStringW($crate::real_c_string::real_c_wstring!(
+                    $x
+                ))
+            },
+            std::marker::PhantomData,
+        ) as $crate::strings::encrypted_w::EncryptedStringW // To remove mut
     };
 }

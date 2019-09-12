@@ -42,6 +42,8 @@ fn main() {
     // Blackboxes here is to not inline the math
     let a = black_box(2);
     let b = black_box(3);
+    // Also you can blackbox values by yourself:
+    // unsafe { asm!("" : : "r"(&a), "r"(&b)) }
     println!("{} + {} = {}", a, b, protected!("Adding"; ultra false; {
         a + b
     }));
