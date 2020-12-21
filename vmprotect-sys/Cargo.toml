@@ -1,0 +1,5 @@
+[package]
+name = "vmprotect-sys"
+version = "0.1.0"
+authors = ["Yaroslav Bolyukin <iam@lach.pw>"]
+edition = "2018"
