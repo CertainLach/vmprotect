@@ -1,5 +1,7 @@
 [package]
 name = "vmprotect-sys"
+description = "VMProtect bindings"
 version = "0.1.0"
 authors = ["Yaroslav Bolyukin <iam@lach.pw>"]
+license = "MIT"
 edition = "2018"
