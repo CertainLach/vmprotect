@@ -1,92 +1,92 @@
-#![feature(type_ascription, proc_macro_hygiene, stmt_expr_attributes)]
+#![feature(asm)]
 
-pub use real_c_string;
+#[doc(hidden)]
+pub use real_c_string::real_c_string as marker_name;
+pub use vmprotect_macros::protected as protect;
+#[doc(hidden)]
+pub use vmprotect_sys;
 
-pub mod internal;
 #[cfg(feature = "licensing")]
 pub mod licensing;
+#[doc(hidden)]
+pub mod markers;
 #[cfg(feature = "service")]
 pub mod service;
 #[cfg(feature = "strings")]
 pub mod strings;
 
+#[inline(always)]
+#[doc(hidden)]
+pub fn blackbox() {
+    unsafe {
+        asm!("nop");
+    }
+}
+
+#[inline(always)]
+#[doc(hidden)]
+pub fn blackbox_value<T>(value: &mut T) {
+    let ptr = value as *mut _;
+    unsafe {
+        asm!("nop {}", in(reg) ptr);
+    }
+}
+
 #[macro_export]
 macro_rules! protected {
-    ($x: expr; mutate; $code: expr) => {{
-        let ret;
-        unsafe {
-            $crate::internal::VMProtectBeginMutation($crate::real_c_string::real_c_string!($x))
-        };
-        ret = $code;
-        unsafe {
-            $crate::internal::VMProtectEnd();
-        };
+    (mutate $x: literal; $code: expr) => {{
+        $crate::markers::begin_mutation($crate::marker_name!($x));
+        $crate::blackbox();
+        let mut ret = $code;
+        $crate::blackbox_value(&mut ret);
+        $crate::markers::end();
         ret
     }};
-    ($x: expr; virtualize false; $code: expr) => {{
-        let ret;
-        unsafe {
-            $crate::internal::VMProtectBeginVirtualization($crate::real_c_string::real_c_string!(
-                $x
-            ))
-        };
-        ret = $code;
-        unsafe {
-            $crate::internal::VMProtectEnd();
-        };
+    (virtualize $x: literal; $code: expr) => {{
+        $crate::markers::begin_virtualization($crate::marker_name!($x));
+        $crate::blackbox();
+        let mut ret = $code;
+        $crate::blackbox_value(&mut ret);
+        $crate::markers::end();
         ret
     }};
-    ($x: expr; virtualize true; $code: expr) => {{
-        let ret;
-        unsafe {
-            $crate::internal::VMProtectBeginVirtualizationLockByKey(
-                $crate::real_c_string::real_c_string!($x),
-            )
-        };
-        ret = $code;
-        unsafe {
-            $crate::internal::VMProtectEnd();
-        };
+    (virtualize, lock $x: literal; $code: expr) => {{
+        $crate::markers::begin_virtualization_lock_by_key($crate::marker_name!($x));
+        $crate::blackbox();
+        let mut ret = $code;
+        $crate::blackbox_value(&mut ret);
+        $crate::markers::end();
         ret
     }};
-    ($x: expr; ultra false; $code: expr) => {{
-        let ret;
-        unsafe { $crate::internal::VMProtectBeginUltra($crate::real_c_string::real_c_string!($x)) };
-        ret = $code;
-        unsafe {
-            $crate::internal::VMProtectEnd();
-        };
+    (ultra $x: literal; $code: expr) => {{
+        $crate::markers::begin_ultra($crate::marker_name!($x));
+        $crate::blackbox();
+        let mut ret = $code;
+        $crate::blackbox_value(&mut ret);
+        $crate::markers::end();
         ret
     }};
-    ($x: expr; ultra true; $code: expr) => {{
-        let ret;
-        unsafe {
-            $crate::internal::VMProtectBeginUltraLockByKey($crate::real_c_string::real_c_string!(
-                $x
-            ))
-        };
-        ret = $code;
-        unsafe {
-            $crate::internal::VMProtectEnd();
-        };
+    (ultra, lock $x: literal; $code: expr) => {{
+        $crate::markers::begin_ultra_lock_by_key($crate::marker_name!($x));
+        $crate::blackbox();
+        let mut ret = $code;
+        $crate::blackbox_value(&mut ret);
+        $crate::markers::end();
         ret
     }};
-    (A; $x: expr) => {
-        $crate::strings::encrypted_a::EncryptedStringA(
-            unsafe {
-                $crate::internal::VMProtectDecryptStringA($crate::real_c_string::real_c_string!($x))
-            },
-            std::marker::PhantomData,
-        ) as $crate::strings::encrypted_a::EncryptedStringA
-    };
-    (W; $x: expr) => {
-        $crate::strings::encrypted_w::EncryptedStringW(
-            unsafe {
-                $crate::internal::VMProtectDecryptStringW($crate::real_c_string::real_c_wstring!(
-                    $x
-                ))
-            },
-            std::marker::PhantomData,
-        ) as $crate::strings::encrypted_w::EncryptedStringW // To remove mut
-    };
+
+    (cstr $x: literal) => {{
+        unsafe {$crate::strings::encrypted_a::EncryptedStringA::new(
+            $crate::marker_name!($x),
+            $x.len(),
+        )}
+    }};
+    (cwstr $x: literal) => {{
+        unsafe {$crate::strings::encrypted_a::EncryptedStringW::new(
+            $crate::marker_name!($x),
+        )}
+    }};
+    (str $x: literal) => {{
+        &$crate::protected!(cstr $x) as &str
+    }}
 }
