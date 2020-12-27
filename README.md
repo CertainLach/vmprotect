@@ -4,6 +4,29 @@ WIP VMProtect SDK for rust
 
 ## Basic VMProtect features
 
+### `protected` attribute
+
+You need to add [this script](./script.lua) to vmprotect project for this attribute
+
+Syntax:
+
+```rust
+#[protected(TYPE[, lock])]
+fn some_fn() { ... }
+```
+
+- TYPE: Protection type
+- [, lock]: Require license to get this function to work.
+
+Example:
+
+```rust
+#[protected(virtualize)]
+fn stringify<T: Display>(value: T) -> String {
+    format!("{}", value)
+}
+```
+
 ### `protected!` macro for code
 
 Syntax:
@@ -11,12 +34,12 @@ Syntax:
 ```rust
 use vmprotect::protected;
 
-protected!("NAME"; TYPE [KEY]; { /*CODE*/ })
+protected!(TYPE[, lock] "NAME"; { /*CODE*/ })
 ```
 
 - NAME: Which name will be displayed in VMProtect GUI
 - TYPE: Protection type (mutate/virtualize/ultra per VMProtect docs)
-- [KEY]: For virtualize/ultra only, require license activation to get this function to work
+- [, lock]: For virtualize/ultra only, require license activation to get this function to work
 - CODE: Your code goes here
 
 Protected code block is works like any other rust block, i.e:
@@ -27,24 +50,14 @@ use vmprotect::protected;
 // Before protection
 let a = {2+3};
 // After protection
-let a = protected!("Addiction"; virtualize false; { 2 + 3 });
+let a = protected!(virtualize "Addiction"; { 2 + 3 });
 ```
 
 Example:
 
 ```rust
-#![feature(test)] // For black_box support
-
-use vmprotect::protected;
-use std::hint::black_box;
-
 fn main() {
-    // Blackboxes here is to not inline the math
-    let a = black_box(2);
-    let b = black_box(3);
-    // Also you can blackbox values by yourself:
-    // unsafe { asm!("" : : "r"(&a), "r"(&b)) }
-    println!("{} + {} = {}", a, b, protected!("Adding"; ultra false; {
+    println!("{} + {} = {}", a, b, protected!(ultra "Adding"; {
         a + b
     }));
 }
@@ -60,7 +73,7 @@ use vmprotect::protected;
 protected!(TYPE "TEXT")
 ```
 
-- TYPE: Text type, possible values: A (for normal c strings)/W (for uint16_t c strings (Used i.e in windows))
+- TYPE: Text type, possible values: cstr (for normal c strings)/cwstr (for uint16_t c strings (Used i.e in windows))
 - TEXT: Your text, should be supported by your selected text type
 
 This macro returns string, which can be transformed to normal one. This string is freed when dropped, implementations is located at `vmprotect::strings::{encrypted_a::EncryptedStringA, encrypted_w::EncryptedStringW}`
@@ -71,20 +84,18 @@ use vmprotect::protected;
 // Before protection
 let a = "Hello, world!";
 // After protection
-let a = protected!(A; "Hello, world!");
+let a = protected!(cstr "Hello, world!");
 // Also for wide-strings:
-let a = protected!(W; "Привет, мир!");
+let a = protected!(cwstr "Привет, мир!");
 ```
 
 Example:
 
 ```rust
-#![feature(type_ascription)] // For `.into(): T` syntax support
-
 use vmprotect::protected;
 
 fn main() {
-    println!("Hello, {:?}!", protected!(A; "%Username%").into(): String);
+    println!("Hello, {:?}!", protected!(A; "%Username%").into() as String);
 }
 ```
 
