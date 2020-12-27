@@ -51,30 +51,30 @@ extern "system" {
 #[derive(Default, Clone, Copy)]
 #[repr(C, packed)]
 pub struct VMProtectDate {
-    w_year: u16,
-    b_month: u8,
-    b_day: u8,
+    pub w_year: u16,
+    pub b_month: u8,
+    pub b_day: u8,
 }
 
 #[derive(Clone, Copy)]
 #[repr(C, packed)]
 pub struct VMProtectSerialNumberData {
     /// State flags
-    state: u32,
+    pub state: u32,
     /// User name
-    user_name: [u16; 256],
+    pub user_name: [u16; 256],
     /// Email
-    email: [u16; 256],
+    pub email: [u16; 256],
     /// Date of serial number expiration
-    expire: VMProtectDate,
+    pub expire: VMProtectDate,
     /// Max date of build, that will accept this key
-    max_build: VMProtectDate,
+    pub max_build: VMProtectDate,
     /// Running time in minutes
-    running_time: u32,
+    pub running_time: u32,
     /// Length of user data in bUserData
-    user_data_length: u8,
+    pub user_data_length: u8,
     /// Up to 255 bytes of user data
-    user_data: [u8; 255],
+    pub user_data: [u8; 255],
 }
 
 impl Default for VMProtectSerialNumberData {
