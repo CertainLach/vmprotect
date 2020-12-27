@@ -1,41 +1,54 @@
+use std::fmt;
+use std::marker::PhantomData;
+use std::ops::Deref;
 use std::os::raw::{c_char, c_void};
+use vmprotect_sys::VMProtectDecryptStringA;
+use vmprotect_sys::VMProtectFreeString;
 
-use crate::internal;
-use std::ffi::{CStr, CString};
-
-pub struct EncryptedStringA<'t>(pub *const c_char, pub std::marker::PhantomData<&'t c_char>);
+pub struct EncryptedStringA<'t>(*const c_char, usize, PhantomData<&'t c_char>);
+impl EncryptedStringA<'_> {
+    /// Do not call this method directly, use macro
+    ///
+    /// # Safety
+    /// 
+    /// str should be correct c string literal
+    /// 
+    /// len should be length of passed str (in bytes) excluding \0
+    #[inline(always)]
+    #[doc(hidden)]
+    pub unsafe fn new(str: *const c_char, len: usize) -> Self {
+        Self(VMProtectDecryptStringA(str), len, PhantomData)
+    }
+}
 impl<'t> Drop for EncryptedStringA<'t> {
+    #[inline(always)]
     fn drop(&mut self) {
-        unsafe { internal::VMProtectFreeString(self.0 as *const c_void) };
+        unsafe { VMProtectFreeString(self.0 as *const c_void) };
     }
 }
-impl<'t> AsRef<CStr> for EncryptedStringA<'t> {
-    fn as_ref(&self) -> &CStr {
-        unsafe { CStr::from_ptr(self.0) }
-    }
-}
-impl<'t> Into<CString> for EncryptedStringA<'t> {
-    fn into(self) -> CString {
-        (self.as_ref(): &CStr).to_owned()
-    }
-}
-impl<'t> AsRef<str> for EncryptedStringA<'t> {
-    fn as_ref(&self) -> &str {
-        (self.as_ref(): &CStr).to_str().unwrap()
+impl Deref for EncryptedStringA<'_> {
+    type Target = str;
+
+    #[inline(always)]
+    fn deref(&self) -> &str {
+        // Safe, because input is already verified by real_c_string macro
+        let slice = unsafe { std::slice::from_raw_parts(self.0 as *const u8, self.1) };
+        unsafe { std::str::from_utf8_unchecked(slice) }
     }
 }
 impl<'t> Into<String> for EncryptedStringA<'t> {
+    #[inline(always)]
     fn into(self) -> String {
-        (self.as_ref(): &str).to_owned()
+        self.to_owned()
     }
 }
-impl<'t> std::fmt::Display for EncryptedStringA<'t> {
-    fn fmt(&self, fmt: &mut std::fmt::Formatter<'_>) -> std::result::Result<(), std::fmt::Error> {
-        write!(fmt, "{}", self.as_ref(): &str)
+impl<'t> fmt::Display for EncryptedStringA<'t> {
+    fn fmt(&self, fmt: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(fmt, "{}", self.as_ref() as &str)
     }
 }
-impl<'t> std::fmt::Debug for EncryptedStringA<'t> {
-    fn fmt(&self, fmt: &mut std::fmt::Formatter<'_>) -> std::result::Result<(), std::fmt::Error> {
-        write!(fmt, "{:?}", self.as_ref(): &CStr)
+impl<'t> fmt::Debug for EncryptedStringA<'t> {
+    fn fmt(&self, fmt: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(fmt, "{:?}", self.as_ref() as &str)
     }
 }

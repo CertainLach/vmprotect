@@ -1,31 +1,29 @@
-use crate::internal;
-use std::ffi::OsString;
+use std::marker::PhantomData;
 use std::os::raw::c_void;
-use widestring::{U16CStr, U16CString};
+use vmprotect_sys::VMProtectDecryptStringW;
+use vmprotect_sys::VMProtectFreeString;
+use widestring::U16CStr;
 
-pub struct EncryptedStringW<'t>(pub *const i16, pub std::marker::PhantomData<&'t i16>);
+pub struct EncryptedStringW<'t>(*const i16, PhantomData<&'t i16>);
+impl EncryptedStringW<'_> {
+    /// Do not call this method directly, use macro
+    ///
+    /// # Safety
+    /// 
+    /// str should be correct c string literal
+    #[doc(hidden)]
+    #[inline(always)]
+    pub unsafe fn new(str: *const i16) -> Self {
+        Self(VMProtectDecryptStringW(str), PhantomData)
+    }
+}
 impl<'t> Drop for EncryptedStringW<'t> {
     fn drop(&mut self) {
-        unsafe { internal::VMProtectFreeString(self.0 as *const c_void) };
+        unsafe { VMProtectFreeString(self.0 as *const c_void) };
     }
 }
-impl<'t> AsRef<U16CStr> for EncryptedStringW<'t> {
-    fn as_ref(&self) -> &U16CStr {
-        unsafe { U16CStr::from_ptr_str(self.0 as *const u16) }
-    }
-}
-impl<'t> Into<U16CString> for EncryptedStringW<'t> {
-    fn into(self) -> U16CString {
-        (self.as_ref(): &U16CStr).to_owned()
-    }
-}
-impl<'t> Into<String> for EncryptedStringW<'t> {
-    fn into(self) -> String {
-        (self.as_ref(): &U16CStr).to_string().unwrap()
-    }
-}
-impl<'t> Into<OsString> for EncryptedStringW<'t> {
-    fn into(self) -> OsString {
-        (self.as_ref(): &U16CStr).to_os_string()
+impl From<EncryptedStringW<'_>> for &U16CStr {
+    fn from(str: EncryptedStringW<'_>) -> Self {
+        unsafe { U16CStr::from_ptr_str(str.0 as *const u16) }
     }
 }
