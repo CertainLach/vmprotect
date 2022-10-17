@@ -1,4 +1,4 @@
-#![feature(asm)]
+use std::arch::asm;
 
 #[doc(hidden)]
 pub use real_c_string::real_c_string as marker_name;
