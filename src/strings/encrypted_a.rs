@@ -36,10 +36,10 @@ impl Deref for EncryptedStringA<'_> {
         unsafe { std::str::from_utf8_unchecked(slice) }
     }
 }
-impl<'t> Into<String> for EncryptedStringA<'t> {
+impl<'t> From<EncryptedStringA<'t>> for String {
     #[inline(always)]
-    fn into(self) -> String {
-        self.to_owned()
+    fn from(val: EncryptedStringA<'t>) -> Self {
+        val.to_owned()
     }
 }
 impl<'t> fmt::Display for EncryptedStringA<'t> {

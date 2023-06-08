@@ -1,6 +1,6 @@
 use std::os::raw::{c_char, c_void};
 
-/// Original API implementation
+// Original API implementation
 #[cfg_attr(
     all(not(target_os = "macos"), target_pointer_width = "64"),
     link(name = "VMProtectSDK64")
