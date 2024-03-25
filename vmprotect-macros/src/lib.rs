@@ -37,7 +37,7 @@ pub fn protected(attr: TokenStream, fn_ts: TokenStream) -> TokenStream {
         vis,
         sig,
         block,
-    } = syn::parse(fn_ts.clone()).expect("failed to parse as fn");
+    } = syn::parse(fn_ts).expect("failed to parse as fn");
     let mut name = "vmprotect_".to_owned();
     name.push_str(&prot_type);
     if lock {
@@ -49,7 +49,7 @@ pub fn protected(attr: TokenStream, fn_ts: TokenStream) -> TokenStream {
     let wrapped_ident = syn::Ident::new(&name, sig.ident.span());
     let wrapper = syn::ItemFn {
         attrs: attrs.clone(),
-        vis: vis.clone(),
+        vis,
         sig: sig.clone(),
         block: {
             let mut args: Punctuated<_, syn::token::Comma> = Punctuated::new();
@@ -69,7 +69,7 @@ pub fn protected(attr: TokenStream, fn_ts: TokenStream) -> TokenStream {
             .unwrap()
         },
     };
-    let mut wrapped_sig = sig.clone();
+    let mut wrapped_sig = sig;
     wrapped_sig.ident = wrapped_ident;
     let wrapped = syn::ItemFn {
         attrs,

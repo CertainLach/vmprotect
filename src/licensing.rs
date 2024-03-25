@@ -178,6 +178,36 @@ pub struct SerialNumberData {
     running_time: Duration,
     user_data: Vec<u8>,
 }
+impl SerialNumberData {
+    #[inline(always)]
+    pub fn state(&self) -> SerialState {
+        self.state
+    }
+    #[inline(always)]
+    pub fn user_name(&self) -> &str {
+        &self.user_name
+    }
+    #[inline(always)]
+    pub fn email(&self) -> &str {
+        &self.email
+    }
+    #[inline(always)]
+    pub fn expire(&self) -> Option<Date<Utc>> {
+        self.expire
+    }
+    #[inline(always)]
+    pub fn max_build(&self) -> Option<Date<Utc>> {
+        self.max_build
+    }
+    #[inline(always)]
+    pub fn running_time(&self) -> Duration {
+        self.running_time
+    }
+    #[inline(always)]
+    pub fn user_data(&self) -> &[u8] {
+        &self.user_data
+    }
+}
 
 #[derive(Debug, PartialEq)]
 pub enum ActivationStatus {

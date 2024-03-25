@@ -82,7 +82,7 @@ macro_rules! protected {
         )}
     }};
     (cwstr $x: literal) => {{
-        unsafe {$crate::strings::encrypted_a::EncryptedStringW::new(
+        unsafe {$crate::strings::encrypted_w::EncryptedStringW::new(
             $crate::marker_name!($x),
         )}
     }};
