@@ -1,3 +1,4 @@
+
 local _ident = 0
 function ident()
 	_ident = _ident + 1
@@ -14,32 +15,81 @@ function bprint(smth)
 	print(buf)
 end
 
+function remove_prefix(str, prefix)
+   if str:sub(1, #prefix) == prefix then
+       return str:sub(#prefix + 1), true
+   end
+   return str, false
+end
+function remove_suffix(str, suffix)
+   if str:sub(-#suffix) == suffix then
+       return str:sub(1, -#suffix - 1), true
+   end
+   return str, false
+end
+
+function choose_prefix(str, prefixes)
+   for _, prefix in ipairs(prefixes) do
+       if str:sub(1, #prefix) == prefix then
+           return str:sub(#prefix + 1), prefix
+       end
+   end
+   error("Unexpected function name")
+end
+
 function OnBeforeCompilation()
 	local file = vmprotect.core():outputArchitecture()
-	for i = 1, file:mapFunctions():count() do
-		local fn = file:mapFunctions():item(i)
-		if fn:name():find("^vmprotect_") ~= nil then
-			bprint("Added " .. fn:name())
+	
+	local exports = file:exports()
+	local mapFunctions = file:mapFunctions()
+	local functions = file:functions()
+
+	for i = 1, mapFunctions:count() do
+		local fn = mapFunctions:item(i)
+		local name, needs_processing = remove_prefix(fn:name(), "vmprotect_");
+		
+		if needs_processing then
+			local name, processing_kind = choose_prefix(name, {"ultra_", "virtualize_", "mutate_", "destroy_"})
+			local name, lock_to_key = remove_prefix(name, "lock_")
+			name = name:match("^(.-)_[%d]+$")
+			bprint("Processing " .. name .. " (" .. fn:address():tostring() .. ")")
 			ident()
-			local added
+			
 			local addType
-			if fn:name():find("_ultra_") ~= nil then
-				bprint("As ultra")
+			if processing_kind == "ultra_" then
+				bprint("Mutating + virtualizing")
 				addType = CompilationType.Ultra
-			elseif fn:name():find("_virtualize_") ~= nil then
-				bprint("As virtualized")
+			elseif processing_kind == "virtualize_" then
+				bprint("Virtualizing")
 				addType = CompilationType.Virtualization
-			elseif fn:name():find("_mutate_") ~= nil then
-				bprint("As mutated")
+			elseif processing_kind == "mutate_" then
+				bprint("Mutating")
 				addType = CompilationType.Mutation
+			elseif processing_kind == "destroy_" then
+				bprint("Destroying")
+				addType = nil
 			end
-			added = file:functions():addByAddress(fn:address(), addType)
-			if fn:name():find("_lock_") ~= nil then
-				if addType == CompilationType.Mutation then
-					error("Lock doesn't work at mutated code!")
+
+			local added = file:functions():addByAddress(fn:address(), addType)
+			
+			if processing_kind == "destroy_" then
+				added:destroy()
+			end
+			
+			if lock_to_key then
+				if addType ~= CompilationType.Virtualization and addType ~= CompilationType.Ultra then
+					error("Lock requires virtualization")
 				end
-				bprint("And locked by key")
+				bprint("And locking by key")
 				added:setLockToKey(true)
+			end
+			
+			for i = 1, exports:count() do
+				if exports:item(i):address() == fn:address() then
+					bprint("And removing from exports")
+					exports:delete(i)
+					break
+				end
 			end
 			deent()
 		end
