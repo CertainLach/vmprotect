@@ -1,6 +1,6 @@
 use proc_macro::{TokenStream, TokenTree};
 use syn::{punctuated::Punctuated, ItemFn};
-use twox_hash::xxh3::hash128;
+use twox_hash::XxHash3_128;
 
 #[proc_macro_attribute]
 pub fn protected(attr: TokenStream, fn_ts: TokenStream) -> TokenStream {
@@ -45,7 +45,7 @@ pub fn protected(attr: TokenStream, fn_ts: TokenStream) -> TokenStream {
     }
     name.push('_');
 
-    name.push_str(&format!("{}", hash128(sig.ident.to_string().as_bytes())));
+    name.push_str(&format!("{}", XxHash3_128::oneshot(sig.ident.to_string().as_bytes())));
     let wrapped_ident = syn::Ident::new(&name, sig.ident.span());
     let wrapper = syn::ItemFn {
         attrs: attrs.clone(),

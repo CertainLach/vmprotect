@@ -1,5 +1,5 @@
 use bitflags::bitflags;
-use chrono::{offset::TimeZone, Date, Utc};
+use chrono::NaiveDate;
 use std::ffi::NulError;
 use std::ffi::{CStr, CString};
 use std::os::raw::c_char;
@@ -10,6 +10,7 @@ use vmprotect_sys::{
     VMProtectGetSerialNumberData, VMProtectGetSerialNumberState, VMProtectSerialNumberData,
     VMProtectSetSerialNumber,
 };
+use widestring::U16CString;
 
 /// Gets hwid to display to user
 ///
@@ -29,14 +30,15 @@ pub fn get_hwid() -> String {
 #[inline(always)]
 pub fn set_serial_number(serial: impl Into<Vec<u8>>) -> Result<SerialState, NulError> {
     let serial = CString::new(serial)?;
-    Ok(SerialState::new(unsafe {
-        VMProtectSetSerialNumber(serial.as_ptr())
-    }))
+    Ok(
+        SerialState::new(unsafe { VMProtectSetSerialNumber(serial.as_ptr()) })
+            .unwrap_or(SerialState::CORRUPTED),
+    )
 }
 
 #[inline(always)]
 pub fn get_serial_number_state() -> SerialState {
-    SerialState::new(unsafe { VMProtectGetSerialNumberState() })
+    SerialState::new(unsafe { VMProtectGetSerialNumberState() }).unwrap_or(SerialState::CORRUPTED)
 }
 
 #[inline(always)]
@@ -89,6 +91,7 @@ pub fn deactivate_license(serial: impl Into<Vec<u8>>) -> Result<(), ActivationSt
 }
 
 bitflags! {
+    #[derive(Clone, Copy, Debug)]
     pub struct SerialState: u32 {
         const CORRUPTED = 0x00000001;
         const INVALID = 0x00000002;
@@ -100,8 +103,8 @@ bitflags! {
     }
 }
 impl SerialState {
-    pub fn new(value: u32) -> Self {
-        SerialState { bits: value }
+    pub fn new(value: u32) -> Option<Self> {
+        SerialState::from_bits(value)
     }
     #[inline(always)]
     pub fn is_success(&self) -> bool {
@@ -133,11 +136,15 @@ impl SerialState {
     }
 }
 
-fn convert_date(date: &VMProtectDate) -> Option<Date<Utc>> {
+fn convert_date(date: &VMProtectDate) -> Option<NaiveDate> {
     if date.w_year == 0 && date.b_month == 0 && date.b_day == 0 {
         return None;
     }
-    Some(Utc.ymd(date.w_year as i32, date.b_month as u32, date.b_day as u32))
+    // In case of broken date - assume it is invalid, and return known date in the past (1970-1-1)
+    Some(
+        NaiveDate::from_ymd_opt(date.w_year as i32, date.b_month as u32, date.b_day as u32)
+            .unwrap_or_default(),
+    )
 }
 
 impl From<VMProtectSerialNumberData> for SerialNumberData {
@@ -145,15 +152,13 @@ impl From<VMProtectSerialNumberData> for SerialNumberData {
     #[allow(unused_unsafe)]
     fn from(data: VMProtectSerialNumberData) -> Self {
         Self {
-            state: SerialState::new(data.state),
-            user_name: widestring::U16CString::from_vec_with_nul(
-                unsafe { data.user_name }.to_vec(),
-            )
-            .unwrap()
+            state: SerialState::new(data.state).unwrap_or(SerialState::CORRUPTED),
+            user_name: unsafe {
+                U16CString::from_ptr_truncate((&raw const data.user_name).cast(), 256)
+            }
             .to_string()
             .unwrap(),
-            email: widestring::U16CString::from_vec_with_nul(unsafe { data.email }.to_vec())
-                .unwrap()
+            email: unsafe { U16CString::from_ptr_truncate((&raw const data.email).cast(), 256) }
                 .to_string()
                 .unwrap(),
             expire: convert_date(&data.expire),
@@ -172,9 +177,9 @@ pub struct SerialNumberData {
     /// Email
     email: String,
     /// Date of serial number expiration
-    expire: Option<Date<Utc>>,
+    expire: Option<NaiveDate>,
     /// Max date of build, that will accept this key
-    max_build: Option<Date<Utc>>,
+    max_build: Option<NaiveDate>,
     running_time: Duration,
     user_data: Vec<u8>,
 }
@@ -192,11 +197,11 @@ impl SerialNumberData {
         &self.email
     }
     #[inline(always)]
-    pub fn expire(&self) -> Option<Date<Utc>> {
+    pub fn expire(&self) -> Option<NaiveDate> {
         self.expire
     }
     #[inline(always)]
-    pub fn max_build(&self) -> Option<Date<Utc>> {
+    pub fn max_build(&self) -> Option<NaiveDate> {
         self.max_build
     }
     #[inline(always)]

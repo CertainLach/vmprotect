@@ -11,6 +11,6 @@ proc-macro = true
 
 [dependencies]
 quote = "1.0"
-syn = { version = "1.0", features = ["full"] }
-twox-hash = "1.6"
-hex = "0.4.2"
+syn = { version = "2.0", features = ["full"] }
+twox-hash = "2.1"
+hex = "0.4.3"
