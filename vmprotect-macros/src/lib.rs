@@ -1,10 +1,10 @@
 use proc_macro::{TokenStream, TokenTree};
+use quote::format_ident;
 use syn::{punctuated::Punctuated, ItemFn};
 use twox_hash::XxHash3_128;
 
 #[proc_macro_attribute]
 pub fn protected(attr: TokenStream, fn_ts: TokenStream) -> TokenStream {
-    println!("{:?}", attr);
     let mut attr = attr.into_iter();
     let prot_type = if let Some(prot_type @ TokenTree::Ident { .. }) = attr.next() {
         prot_type.to_string()
@@ -12,7 +12,7 @@ pub fn protected(attr: TokenStream, fn_ts: TokenStream) -> TokenStream {
         panic!("missing protection type")
     };
 
-    if !["mutate", "virtualize", "ultra"].contains(&prot_type.as_ref()) {
+    if !["mutate", "virtualize", "ultra", "destroy"].contains(&prot_type.as_ref()) {
         panic!("unknown protection type: {}", prot_type);
     }
 
@@ -45,8 +45,13 @@ pub fn protected(attr: TokenStream, fn_ts: TokenStream) -> TokenStream {
     }
     name.push('_');
 
-    name.push_str(&format!("{}", XxHash3_128::oneshot(sig.ident.to_string().as_bytes())));
-    let wrapped_ident = syn::Ident::new(&name, sig.ident.span());
+    // For functions with the same name, we want a deterministic, yet unique identifier
+    // Until there is no way to look at span position, we can just use its debug repr.
+    // Next Rust release it will be possible to do that: https://github.com/rust-lang/rust/pull/140514
+    let s = format!("{:?}", sig.ident.span());
+    let id = XxHash3_128::oneshot(s.as_bytes());
+
+    let wrapped_ident = format_ident!("{name}{}_{id}", &sig.ident);
     let wrapper = syn::ItemFn {
         attrs: attrs.clone(),
         vis,
@@ -83,7 +88,7 @@ pub fn protected(attr: TokenStream, fn_ts: TokenStream) -> TokenStream {
         #[doc(hidden)]
         #wrapped
 
-        #[inline(always)]
+        #[inline]
         #wrapper
     })
     .into()
