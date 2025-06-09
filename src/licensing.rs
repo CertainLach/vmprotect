@@ -1,7 +1,6 @@
 use bitflags::bitflags;
 use chrono::NaiveDate;
-use std::ffi::NulError;
-use std::ffi::{CStr, CString};
+use std::ffi::CStr;
 use std::os::raw::c_char;
 use std::ptr::null_mut;
 use std::time::Duration;
@@ -11,6 +10,7 @@ use vmprotect_sys::{
     VMProtectSetSerialNumber,
 };
 use widestring::U16CString;
+use zeroize::{Zeroize, ZeroizeOnDrop};
 
 /// Gets hwid to display to user
 ///
@@ -26,14 +26,30 @@ pub fn get_hwid() -> String {
     unsafe { String::from_utf8_unchecked(buf) }
 }
 
+const MAX_SERIAL_NUMBER_SIZE: usize = 4096 / 8 * 3 / 2 + 64;
+
+/// Has no internal allocation, making it safer to keep
+/// it on stack, when we want user to always use activation api.
+#[derive(Zeroize, ZeroizeOnDrop)]
+pub struct SerialNumber([i8; MAX_SERIAL_NUMBER_SIZE]);
+impl From<String> for SerialNumber {
+    #[inline(always)]
+    fn from(value: String) -> Self {
+        let mut out = [0u8; MAX_SERIAL_NUMBER_SIZE];
+        if value.len() + 1 <= MAX_SERIAL_NUMBER_SIZE {
+            // Letting it fail on vmprotect side
+            out.copy_from_slice(value.as_bytes());
+        }
+        // Safety: transmute between i8 and u8
+        SerialNumber(unsafe { std::mem::transmute(out) })
+    }
+}
+
 /// Feeds license system with serial number
 #[inline(always)]
-pub fn set_serial_number(serial: impl Into<Vec<u8>>) -> Result<SerialState, NulError> {
-    let serial = CString::new(serial)?;
-    Ok(
-        SerialState::new(unsafe { VMProtectSetSerialNumber(serial.as_ptr()) })
-            .unwrap_or(SerialState::CORRUPTED),
-    )
+pub fn set_serial_number(serial: SerialNumber) -> SerialState {
+    SerialState::new(unsafe { VMProtectSetSerialNumber(serial.0.as_ptr()) })
+        .unwrap_or(SerialState::CORRUPTED)
 }
 
 #[inline(always)]
@@ -58,30 +74,29 @@ pub fn get_serial_number_data() -> Option<SerialNumberData> {
 }
 
 #[inline(always)]
-pub fn activate_license(code: impl Into<Vec<u8>>) -> Result<String, ActivationStatus> {
-    let code = CString::new(code).map_err(|_| ActivationStatus::NulError)?;
+pub fn activate_license(code: &CStr) -> Result<SerialNumber, ActivationStatus> {
+    let mut license = SerialNumber([0; MAX_SERIAL_NUMBER_SIZE]);
     // Max possible, from vmprotect examples
-    let mut out = Vec::with_capacity(4096 / 8 * 3 / 2 + 64);
-    let res =
-        unsafe { VMProtectActivateLicense(code.as_ptr(), out.as_mut_ptr(), out.capacity() as u32) };
+    let res = unsafe {
+        VMProtectActivateLicense(
+            code.as_ptr(),
+            license.0.as_mut_ptr(),
+            MAX_SERIAL_NUMBER_SIZE as u32,
+        )
+    };
     let res = ActivationStatus::from(res);
     if res == ActivationStatus::Ok {
         // Vec buffer is passed to CString
-        Ok(unsafe { CStr::from_ptr(out.as_ptr()) }
-            .to_str()
-            .to_owned()
-            .unwrap()
-            .to_string())
+        Ok(license)
     } else {
         Err(res)
     }
 }
 
 #[inline(always)]
-pub fn deactivate_license(serial: impl Into<Vec<u8>>) -> Result<(), ActivationStatus> {
-    let serial = CString::new(serial).map_err(|_| ActivationStatus::NulError)?;
+pub fn deactivate_license(serial: SerialNumber) -> Result<(), ActivationStatus> {
     // Max possible
-    let res = unsafe { VMProtectDeactivateLicense(serial.as_ptr()) };
+    let res = unsafe { VMProtectDeactivateLicense(serial.0.as_ptr()) };
     let res = ActivationStatus::from(res);
     if res == ActivationStatus::Ok {
         Ok(())
@@ -215,21 +230,20 @@ impl SerialNumberData {
 }
 
 #[derive(Debug, PartialEq)]
+#[repr(u8)]
 pub enum ActivationStatus {
-    Ok,
+    Ok = 0,
     /// Handled by api automatically
-    SmallBuffer,
-    NoConnection,
-    BadReply,
-    Banned,
-    Corrupted,
-    BadCode,
-    AlreadyUsed,
-    SerialUnknown,
-    Expired,
-    NotAvailable,
-    /// Not part of official api
-    NulError,
+    SmallBuffer = 1,
+    NoConnection = 2,
+    BadReply = 3,
+    Banned = 4,
+    Corrupted = 5,
+    BadCode = 6,
+    AlreadyUsed = 7,
+    SerialUnknown = 8,
+    Expired = 9,
+    NotAvailable = 10,
 }
 impl ActivationStatus {
     fn from(id: u32) -> Self {

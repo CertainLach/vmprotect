@@ -22,6 +22,7 @@ num-traits = "0.2.19"
 chrono = "0.4.41"
 vmprotect-sys = { path = "vmprotect-sys", version = "0.1.1" }
 vmprotect-macros = { path = "vmprotect-macros", version = "0.1.0" }
+zeroize = { version = "1.8.1", features = ["derive"] }
 
 [workspace]
 members = ["vmprotect-sys", "vmprotect-macros"]
