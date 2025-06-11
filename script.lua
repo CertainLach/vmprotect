@@ -1,4 +1,3 @@
-
 local _ident = 0
 function ident()
 	_ident = _ident + 1
@@ -36,11 +35,21 @@ function choose_prefix(str, prefixes)
    end
    error("Unexpected function name")
 end
+function tableHas(t, elem)
+	for i = 1, #t do
+		if t[i] == elem then
+			return true
+		end
+	end
+	return false
+end
 
+local toDelete = {};
 function OnBeforeCompilation()
+	bprint("OnBeforeCompilation")
+	ident()
 	local file = vmprotect.core():outputArchitecture()
 	
-	local exports = file:exports()
 	local mapFunctions = file:mapFunctions()
 	local functions = file:functions()
 
@@ -84,14 +93,27 @@ function OnBeforeCompilation()
 				added:setLockToKey(true)
 			end
 			
-			for i = 1, exports:count() do
-				if exports:item(i):address() == fn:address() then
-					bprint("And removing from exports")
-					exports:delete(i)
-					break
-				end
-			end
+			bprint("And queuing for export removal")
+			table.insert(toDelete, fn:address())
 			deent()
 		end
 	end
+	deent()
+end
+function OnBeforeSaveFile()
+	bprint("OnBeforeSaveFile")
+	ident()
+	local file = vmprotect.core():outputArchitecture()
+	
+	local exports = file:exports()
+	for i = exports:count(), 1, -1 do
+		local export = exports:item(i)
+		local address = export:address();
+		
+		if tableHas(toDelete, address) then
+			bprint("Deleting export " .. export:name() .. " (" .. address:tostring() .. ")")
+			exports:delete(i)
+		end
+	end
+	deent()
 end
