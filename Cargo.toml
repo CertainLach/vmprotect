@@ -8,8 +8,10 @@ license = "MIT"
 repository = "https://github.com/CertainLach/vmprotect/"
 
 [features]
-default = ["licensing", "service", "strings"]
+default = ["licensing", "activation", "service", "strings"]
 licensing = []
+# Online activation brings curl dependency on linux, which might be annoying
+activation = ["licensing"]
 strings = []
 service = []
 

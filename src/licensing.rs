@@ -36,12 +36,14 @@ impl From<String> for SerialNumber {
     #[inline(always)]
     fn from(value: String) -> Self {
         let mut out = [0u8; MAX_SERIAL_NUMBER_SIZE];
-        if value.len() + 1 <= MAX_SERIAL_NUMBER_SIZE {
-            // Letting it fail on vmprotect side
+        if value.len() < MAX_SERIAL_NUMBER_SIZE {
+            // Letting it fail on vmprotect side otherwise
             out.copy_from_slice(value.as_bytes());
         }
         // Safety: transmute between i8 and u8
-        SerialNumber(unsafe { std::mem::transmute(out) })
+        SerialNumber(unsafe {
+            std::mem::transmute::<[u8; MAX_SERIAL_NUMBER_SIZE], [i8; MAX_SERIAL_NUMBER_SIZE]>(out)
+        })
     }
 }
 
@@ -74,6 +76,7 @@ pub fn get_serial_number_data() -> Option<SerialNumberData> {
 }
 
 #[inline(always)]
+#[cfg(feature = "activation")]
 pub fn activate_license(code: &CStr) -> Result<SerialNumber, ActivationStatus> {
     let mut license = SerialNumber([0; MAX_SERIAL_NUMBER_SIZE]);
     // Max possible, from vmprotect examples
@@ -94,6 +97,7 @@ pub fn activate_license(code: &CStr) -> Result<SerialNumber, ActivationStatus> {
 }
 
 #[inline(always)]
+#[cfg(feature = "activation")]
 pub fn deactivate_license(serial: SerialNumber) -> Result<(), ActivationStatus> {
     // Max possible
     let res = unsafe { VMProtectDeactivateLicense(serial.0.as_ptr()) };
