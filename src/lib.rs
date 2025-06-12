@@ -65,18 +65,11 @@ macro_rules! protected {
         ret
     }};
 
-    (cstr $x: literal) => {{
-        unsafe {$crate::strings::encrypted_a::EncryptedStringA::new(
-            $crate::marker_name!($x),
-            $x.len(),
-        )}
-    }};
+    (cstr $x: literal) => {
+        // Safety: interior nuls are checked by `real_c_string` crate
+        unsafe { $crate::strings::encrypted_a::EncryptedStringA::new($crate::marker_name!($x)) }
+    };
     (cwstr $x: literal) => {{
-        unsafe {$crate::strings::encrypted_w::EncryptedStringW::new(
-            $crate::marker_name!($x),
-        )}
+        unsafe { $crate::strings::encrypted_w::EncryptedStringW::new($crate::marker_name!($x)) }
     }};
-    (str $x: literal) => {{
-        &$crate::protected!(cstr $x) as &str
-    }}
 }
