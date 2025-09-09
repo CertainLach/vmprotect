@@ -28,9 +28,6 @@ pub fn get_hwid() -> String {
 
 const MAX_SERIAL_NUMBER_SIZE: usize = 4096 / 8 * 3 / 2 + 64;
 
-/// To store
-pub struct SerialNumberExport([i8; MAX_SERIAL_NUMBER_SIZE]);
-
 /// Has no internal allocation, making it safer to keep
 /// it on stack, when we want user to always use activation api.
 #[derive(Zeroize, ZeroizeOnDrop, Clone)]

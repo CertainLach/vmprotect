@@ -1,6 +1,6 @@
 [package]
 name = "vmprotect"
-version = "0.2.0"
+version.workspace = true
 authors = ["Yaroslav Bolyukin <iam@lach.pw>"]
 edition.workspace = true
 description = "Unofficial VMProtect SDK for Rust"
@@ -22,10 +22,11 @@ bitflags = "2.9"
 enum_primitive = "0.1.1"
 num-traits = "0.2.19"
 chrono = "0.4.41"
-vmprotect-sys = { path = "vmprotect-sys", version = "0.1.1" }
-vmprotect-macros = { path = "vmprotect-macros", version = "0.1.0" }
+vmprotect-sys = { path = "vmprotect-sys", version = "1.0.0" }
+vmprotect-macros = { path = "vmprotect-macros", version = "1.0.0" }
 zeroize = { version = "1.8.1", features = ["derive"] }
 
 [workspace]
 members = ["vmprotect-sys", "vmprotect-macros"]
 package.edition = "2024"
+package.version = "1.0.0"

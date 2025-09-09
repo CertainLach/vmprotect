@@ -1,7 +1,7 @@
 [package]
 name = "vmprotect-macros"
 description = "Attribute macro for vmprotect"
-version = "0.1.0"
+version.workspace = true
 authors = ["Yaroslav Bolyukin <iam@lach.pw>"]
 license = "MIT"
 edition.workspace = true
