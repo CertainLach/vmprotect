@@ -4,7 +4,7 @@ description = "Attribute macro for vmprotect"
 version = "0.1.0"
 authors = ["Yaroslav Bolyukin <iam@lach.pw>"]
 license = "MIT"
-edition = "2018"
+edition.workspace = true
 
 [lib]
 proc-macro = true

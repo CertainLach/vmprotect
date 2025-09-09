@@ -4,4 +4,4 @@ description = "VMProtect bindings"
 version = "0.1.1"
 authors = ["Yaroslav Bolyukin <iam@lach.pw>"]
 license = "MIT"
-edition = "2018"
+edition.workspace = true

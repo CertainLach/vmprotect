@@ -10,7 +10,7 @@ use std::os::raw::{c_char, c_void};
     link(name = "VMProtectSDK")
 )]
 #[cfg_attr(target_pointer_width = "32", link(name = "VMProtectSDK32"))]
-extern "system" {
+unsafe extern "system" {
     // Markers
     pub fn VMProtectBegin(name: *const c_char);
     pub fn VMProtectBeginVirtualization(name: *const c_char);

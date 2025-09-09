@@ -28,17 +28,70 @@ pub fn get_hwid() -> String {
 
 const MAX_SERIAL_NUMBER_SIZE: usize = 4096 / 8 * 3 / 2 + 64;
 
+/// To store
+pub struct SerialNumberExport([i8; MAX_SERIAL_NUMBER_SIZE]);
+
 /// Has no internal allocation, making it safer to keep
 /// it on stack, when we want user to always use activation api.
-#[derive(Zeroize, ZeroizeOnDrop)]
+#[derive(Zeroize, ZeroizeOnDrop, Clone)]
 pub struct SerialNumber([i8; MAX_SERIAL_NUMBER_SIZE]);
+impl SerialNumber {
+    #[inline(never)]
+    pub fn export_to_string(&self) -> String {
+        let len = self
+            .0
+            .iter()
+            .position(|v| *v == 0)
+            // Should be unreachable
+            .unwrap_or(0);
+        // FIXME: Might be unsound, assert that string is utf-8 during construction
+        unsafe{str::from_utf8_unchecked(
+            &std::mem::transmute::<&[i8; MAX_SERIAL_NUMBER_SIZE], &[u8; MAX_SERIAL_NUMBER_SIZE]>(
+                &self.0,
+            )[0..len]
+        )}
+        .to_string()
+    }
+    #[inline(always)]
+    pub fn protected_import(protected: Vec<u8>, one_time_pad: impl Iterator<Item = u8>) -> Self {
+        let mut out = [0u8; MAX_SERIAL_NUMBER_SIZE];
+        // Last byte is reserved for \0
+        if protected.len() < MAX_SERIAL_NUMBER_SIZE {
+            // Letting it fail on vmprotect side otherwise
+            for (i, b) in protected
+                .iter()
+                .copied()
+                .zip(one_time_pad)
+                .map(|(v, b)| v ^ b)
+                .enumerate()
+            {
+                out[i] = b;
+            }
+        }
+        // Safety: transmute between i8 and u8
+        SerialNumber(unsafe {
+            std::mem::transmute::<[u8; MAX_SERIAL_NUMBER_SIZE], [i8; MAX_SERIAL_NUMBER_SIZE]>(out)
+        })
+    }
+    #[inline(always)]
+    pub fn protected_export(self, one_time_pad: impl Iterator<Item = u8>) -> Vec<u8> {
+        self.0
+            .iter()
+            .copied()
+            .take_while(|v| *v != 0)
+            .zip(one_time_pad)
+            .map(|(v, b)| v as u8 ^ b)
+            .collect()
+    }
+}
 impl From<String> for SerialNumber {
     #[inline(always)]
     fn from(value: String) -> Self {
         let mut out = [0u8; MAX_SERIAL_NUMBER_SIZE];
+        // Last byte is reserved for \0
         if value.len() < MAX_SERIAL_NUMBER_SIZE {
             // Letting it fail on vmprotect side otherwise
-            out.copy_from_slice(value.as_bytes());
+            out[0..value.len()].copy_from_slice(value.as_bytes());
         }
         // Safety: transmute between i8 and u8
         SerialNumber(unsafe {
@@ -49,7 +102,7 @@ impl From<String> for SerialNumber {
 
 /// Feeds license system with serial number
 #[inline(always)]
-pub fn set_serial_number(serial: SerialNumber) -> SerialState {
+pub fn set_serial_number(serial: &SerialNumber) -> SerialState {
     SerialState::new(unsafe { VMProtectSetSerialNumber(serial.0.as_ptr()) })
         .unwrap_or(SerialState::CORRUPTED)
 }
@@ -68,11 +121,7 @@ pub fn get_serial_number_data() -> Option<SerialNumberData> {
             std::mem::size_of::<VMProtectSerialNumberData>() as u32,
         )
     };
-    if out == 1 {
-        Some(data.into())
-    } else {
-        None
-    }
+    if out == 1 { Some(data.into()) } else { None }
 }
 
 #[inline(always)]

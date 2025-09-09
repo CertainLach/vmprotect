@@ -6,10 +6,10 @@ use syn::parse::{Parse, ParseStream};
 use syn::spanned::Spanned as _;
 use syn::visit_mut::VisitMut;
 use syn::{
-    braced, parse_macro_input, Attribute, FnArg, LitCStr, LitStr, Pat, PatIdent,
-    Signature, Token, Visibility,
+    braced, parse_macro_input, Attribute, FnArg, LitCStr, LitStr, Pat, PatIdent, Path, Signature,
+    Token, Visibility,
 };
-use twox_hash::XxHash3_128;
+use twox_hash::XxHash3_64;
 
 struct ItemFnMini {
     pub attrs: Vec<Attribute>,
@@ -167,13 +167,12 @@ pub fn protected(
     // Until there is no way to look at span position, we can just use its debug repr.
     // Next Rust release it will be possible to do that: https://github.com/rust-lang/rust/pull/140514
     let s = format!("{:?}", sig.ident.span());
-    let id = XxHash3_128::oneshot(s.as_bytes());
+    let id = XxHash3_64::oneshot(s.as_bytes());
 
     let wrapped_ident = format_ident!(
-        "vmprotect_{}{}_{}_{id}",
+        "VMPROTECT_MARKER_{}{}_END_{id}",
         attr.ty.name(),
         if attr.lock { "_lock" } else { "" },
-        &sig.ident
     );
 
     let mut wrapped_attrs = attrs.clone();
@@ -192,6 +191,21 @@ pub fn protected(
         visitor.visit_attributes_mut(&mut wrapper_attrs);
         // Signature is handled below
     }
+
+    let should_inline_wrapper = !wrapper_attrs.iter().any(|v| {
+        let mut path = v.path().to_owned();
+        if path.is_ident("unsafe") {
+            if let Ok(ipath) = v.parse_args::<Path>() {
+                path = ipath;
+            }
+        }
+        path.is_ident("inline")
+            || path.is_ident("no_mangle")
+            || path.is_ident("export_name")
+            || path.is_ident("link_section")
+    });
+    let wrapper_inline_attr = should_inline_wrapper.then(|| quote!(#[inline(always)]));
+
     if let Some(gt) = wrapped_sig.generics.gt_token {
         // Maybe provide some macro for easier multi-specialization?
         // TODO: Allow lifetime annotations
@@ -251,12 +265,12 @@ pub fn protected(
     }
 
     (quote! {
+        #wrapper_inline_attr
         #(#wrapper_attrs)*
         #vis
         #wrapper_sig
         {
             #[inline(never)]
-            #[no_mangle]
             #[doc(hidden)]
             #(#wrapped_attrs)*
             #wrapped_sig

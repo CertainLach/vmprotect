@@ -1,8 +1,8 @@
 [package]
 name = "vmprotect"
 version = "0.2.0"
-authors = ["Лач <iam@lach.pw>"]
-edition = "2018"
+authors = ["Yaroslav Bolyukin <iam@lach.pw>"]
+edition.workspace = true
 description = "Unofficial VMProtect SDK for Rust"
 license = "MIT"
 repository = "https://github.com/CertainLach/vmprotect/"
@@ -28,3 +28,4 @@ zeroize = { version = "1.8.1", features = ["derive"] }
 
 [workspace]
 members = ["vmprotect-sys", "vmprotect-macros"]
+package.edition = "2024"

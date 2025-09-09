@@ -56,7 +56,7 @@ macro_rules! protected {
         $crate::markers::end();
         ret
     }};
-    (ultra, lock $x: literal; $code: expr) => {{
+    (ultra, lock($x: literal), $code: expr) => {{
         $crate::markers::begin_ultra_lock_by_key($crate::marker_name!($x));
         $crate::blackbox();
         let mut ret = $code;
